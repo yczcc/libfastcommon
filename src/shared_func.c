@@ -616,6 +616,52 @@ char *trim(char *pStr)
 	return pStr;
 }
 
+void string_ltrim(string_t *s)
+{
+	char *p;
+	char *end;
+
+	end = s->str + s->len;
+	for (p=s->str; p<end; p++)
+	{
+		if (!(' ' == *p|| '\n' == *p || '\r' == *p || '\t' == *p))
+		{
+			break;
+		}
+	}
+
+	if (p != s->str)
+    {
+        s->str = p;
+        s->len = end - p;
+    }
+}
+
+void string_rtrim(string_t *s)
+{
+	char *p;
+	char *end;
+
+	if (s->len == 0)
+	{
+		return;
+	}
+
+	end = s->str + s->len - 1;
+	for (p = end; p >= s->str; p--)
+	{
+		if (!(' ' == *p || '\n' == *p || '\r' == *p || '\t' == *p))
+		{
+			break;
+		}
+	}
+
+	if (p != end)
+	{
+        s->len = (p + 1) - s->str;
+	}
+}
+
 char *formatDateYYYYMMDDHHMISS(const time_t t, char *szDateBuff, const int nSize)
 {
 	time_t timer = t;
@@ -745,6 +791,59 @@ int splitEx(char *src, const char seperator, char **pCols, const int nMaxCols)
 	}
 
 	return count;
+}
+
+bool fc_match_delim(const char *str, const char *delim)
+{
+    const char *sp;
+    const char *send;
+    const char *dp;
+    const char *dend;
+
+    send = str + strlen(str);
+    dend = delim + strlen(delim);
+    for (sp=str; sp<send; sp++)
+    {
+        for (dp=delim; dp<dend; dp++)
+        {
+            if (*sp == *dp)
+            {
+                break;
+            }
+        }
+
+        if (dp == dend)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+ 
+int fc_split_string(char *src, const char *delim, char **pCols, const int nMaxCols)
+{
+    char *token;
+    char *stringp;
+    int count = 0;
+
+    stringp = src;
+    while ((token=strsep(&stringp, delim)) != NULL)
+    {
+        if (count >= nMaxCols)
+        {
+            break;
+        }
+
+        if (fc_match_delim(token, delim))
+        {
+            continue;
+        }
+
+        pCols[count++] = token;
+    }
+
+    return count;
 }
 
 int my_strtok(char *src, const char *delim, char **pCols, const int nMaxCols)
@@ -2559,4 +2658,126 @@ key_t fc_ftok(const char *path, const int proj_id)
     int hash_code;
     hash_code = simple_hash(path, strlen(path));
     return (((proj_id & 0xFF) << 24) | (hash_code & 0xFFFFFF));
+}
+
+static void add_thousands_separator(char *str, const int len)
+{
+    int new_len;
+    int addings;
+    int sub;
+    int chars;
+    int add_count;
+    char *src;
+    char *dest;
+    char *first;
+
+    if (len <= 3)
+    {
+        return;
+    }
+
+    if (*str == '-')
+    {
+        first = str + 1;
+        sub = 2;
+    }
+    else
+    {
+        first = str;
+        sub = 1;
+    }
+
+    addings = (len - sub) / 3;
+    new_len = len + addings;
+
+    src = str + (len - 1);
+    dest = str + new_len;
+    *dest-- = '\0';
+    chars = 0;
+    add_count = 0;
+    while (src >= first)
+    {
+        *dest-- = *src--;
+        if (++chars % 3 == 0)
+        {
+            if (add_count == addings)
+            {
+                break;
+            }
+
+            *dest-- = ',';
+            add_count++;
+        }
+    }
+}
+
+const char *int2str(const int n, char *buff, const bool thousands_separator)
+{
+    int len;
+    len = sprintf(buff, "%d", n);
+    if (thousands_separator)
+    {
+        add_thousands_separator(buff, len);
+    }
+    return buff;
+}
+
+const char *long2str(const int64_t n, char *buff, const bool thousands_separator)
+{
+    int len;
+    len = sprintf(buff, "%"PRId64, n);
+    if (thousands_separator)
+    {
+        add_thousands_separator(buff, len);
+    }
+    return buff;
+}
+
+bool starts_with(const char *str, const char *needle)
+{
+    int str_len;
+    int needle_len;
+
+    str_len = strlen(str);
+    needle_len = strlen(needle);
+    if (needle_len > str_len) {
+        return false;
+    }
+
+    return memcmp(str, needle, needle_len) == 0;
+}
+
+bool ends_with(const char *str, const char *needle)
+{
+    int str_len;
+    int needle_len;
+    int start_offset;
+
+    str_len = strlen(str);
+    needle_len = strlen(needle);
+    start_offset = str_len - needle_len;
+    if (start_offset < 0) {
+        return false;
+    }
+
+    return memcmp(str + start_offset, needle, needle_len) == 0;
+}
+
+char *fc_strdup(const char *str, const int len)
+{
+    char *output;
+
+    output = (char *)malloc(len + 1);
+    if (output == NULL) {
+        logError("file: "__FILE__", line: %d, "
+                "malloc %d bytes fail",
+                __LINE__, len + 1);
+        return NULL;
+    }
+
+    if (len > 0) {
+        memcpy(output, str, len);
+    }
+    *(output + len) = '\0';
+    return output;
 }

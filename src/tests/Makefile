@@ -1,12 +1,14 @@
 .SUFFIXES: .c .o
 
-COMPILE = $(CC) -g -O1 -Wall -D_FILE_OFFSET_BITS=64 -g -DDEBUG_FLAG
+COMPILE = $(CC) -g -O3 -Wall -D_FILE_OFFSET_BITS=64 -g -DDEBUG_FLAG
 DENPENDS = ../../output
-INC_PATH = -I$(DENPENDS)/include/fastcommon
-LIB_PATH = $(DENPENDS)/lib64/libfastcommon.a -lm -lpthread
+INC_PATH = -I$(DENPENDS)/include
+LIB_PATH = $(DENPENDS)/lib64/libfastcommon.a -lm -ldl -lpthread
 
 ALL_PRGS = test_allocator test_skiplist test_multi_skiplist test_mblock test_blocked_queue \
-           test_id_generator test_ini_parser test_char_convert test_char_convert_loader test_logger
+           test_id_generator test_ini_parser test_char_convert test_char_convert_loader \
+           test_logger test_skiplist_set test_crc32 test_thourands_seperator test_sched_thread \
+           test_json_parser
 
 all: $(ALL_PRGS)
 .c:
